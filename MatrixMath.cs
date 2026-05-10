@@ -147,9 +147,16 @@ namespace MatrixInversion
             operationCount = 0;
             int n = A.GetLength(0);
 
+            double det = Determinant(A);
+            if (Math.Abs(det) < EPSILON)
+                throw new InvalidOperationException(
+                    "Матриця є виродженою (det = 0). Обернення неможливе.");
+
             if (Math.Abs(A[0, 0]) < EPSILON)
                 throw new InvalidOperationException(
-                    "Матриця є виродженою: |A[1,1]| < ε. Обернення неможливе.");
+                    "[BORDERING_UNSTABLE] Елемент A[1,1] = " + A[0, 0].ToString("G4") +
+                    " занадто малий для методу окаймлення.\n" +
+                    "Матриця не є виродженою — скористайтесь LUP-розкладом.");
 
             double[,] Binv;
             try { Binv = new double[n, n]; }
@@ -204,9 +211,9 @@ namespace MatrixInversion
                         $"Переповнення при обчисленнi δ = α − uᵀ·w на кроцi {k + 1}.");
                 if (Math.Abs(delta) < EPSILON)
                     throw new InvalidOperationException(
-                        $"Матриця є виродженою: |α − uᵀ·w| < ε на кроцi {k + 1}. " +
-                        "Обернення неможливе.");
-
+                        $"[BORDERING_UNSTABLE] Метод окаймлення нестiйкий на кроцi {k + 1}.\n" +
+                        "Це може бути спричинено малими елементами, а не виродженiстю.\n" +
+                        "Скористайтесь LUP-розкладом.");
                 double c = 1.0 / delta;
                 operationCount++;
 

@@ -14,6 +14,7 @@ namespace MatrixInversion
         private long _lastOps;
         private double _lastMs;
         private double _lastError;
+        private bool _loadingFile = false;
 
 #pragma warning disable CS8618
         private NumericUpDown nudSize;
@@ -246,7 +247,9 @@ namespace MatrixInversion
             try
             {
                 _matrix = MatrixFileIO.Load(dlg.FileName);
+                _loadingFile = true;
                 nudSize.Value = _matrix.GetLength(0);
+                _loadingFile = false;
                 FillInputGrid(_matrix);
                 UpdateDet();
                 SetComputeEnabled(true);
@@ -300,7 +303,14 @@ namespace MatrixInversion
                 btnSaveReport.Enabled = true;
                 tabMain.SelectedIndex = 1;
             }
-            catch (InvalidOperationException ex) { ShowError("Матриця вироджена", ex.Message); }
+            catch (InvalidOperationException ex)
+            {
+                string title = ex.Message.Contains("[BORDERING_UNSTABLE]")
+                    ? "Обмеження методу окаймлення"
+                    : "Матриця вироджена";
+                string msg = ex.Message.Replace("[BORDERING_UNSTABLE] ", "");
+                ShowError(title, msg);
+            }
             catch (DivideByZeroException ex) { ShowError("Дiлення на нуль", ex.Message); }
             catch (OverflowException ex) { ShowError("Переповнення", ex.Message); }
             catch (OutOfMemoryException ex) { ShowError("Нестача пам'ятi", ex.Message); }
@@ -370,7 +380,14 @@ namespace MatrixInversion
 
                 SetStatus("Порiвняння виконано", false);
             }
-            catch (InvalidOperationException ex) { ShowError("Матриця вироджена", ex.Message); }
+            catch (InvalidOperationException ex)
+            {
+                string title = ex.Message.Contains("[BORDERING_UNSTABLE]")
+                    ? "Обмеження методу окаймлення"
+                    : "Матриця вироджена";
+                string msg = ex.Message.Replace("[BORDERING_UNSTABLE] ", "");
+                ShowError(title, msg);
+            }
             catch (DivideByZeroException ex) { ShowError("Дiлення на нуль", ex.Message); }
             catch (OverflowException ex) { ShowError("Переповнення", ex.Message); }
             catch (OutOfMemoryException ex) { ShowError("Нестача пам'ятi", ex.Message); }
@@ -411,11 +428,12 @@ namespace MatrixInversion
                 "   • Вкажiть розмiр матрицi n (вiд 2 до 150)\n" +
                 "   • Оберiть спосiб введення:\n" +
                 "     - Генерувати випадково — автоматичне заповнення\n" +
-                "     - Завантажити з файлу — формат .txt:\n" +
+                "     - Завантажити з файлу — формат .txt\n" +
                 "       перший рядок: розмiр n\n" +
                 "       далi n рядкiв по n чисел через пробiл\n" +
                 "     - Ввести вручну — заповнiть таблицю\n" +
-                "       та натиснiть «Пiдтвердити введення»\n\n" +
+                "       та натиснiть «Пiдтвердити введення»\n" +
+                "  • Метод окаймлення без вибору головного елемента є чутливим до малих опорних елементів. Тому для захисту від нестійких обчислень використовується поріг ε = 10⁻¹².\n" +
                 "2. ОБЧИСЛЕННЯ\n" +
                 "   • Метод окаймлення — послiдовне нарощування\n" +
                 "     оберненої пiдматрицi вiд 1x1 до nxn\n" +
@@ -434,6 +452,7 @@ namespace MatrixInversion
                 "     кiлькiсть операцiй та час виконання\n\n" +
                 "5. УМОВА ОБЕРНЕННЯ\n" +
                 "   • Матриця повинна бути невиродженою (det \u2260 0)\n" +
+                "   • Для методу окаймлення додатково накладається обмеження чисельної точності: результати обчислень вважаються коректними, якщо абсолютна похибка не перевищує ε = 10⁻¹² включно.\n" +
                 "   • Якщо det = 0 — програма виведе повiдомлення";
 
             MessageBox.Show(text, "Iнструкцiя", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -460,6 +479,7 @@ namespace MatrixInversion
 
         private void OnSizeChanged()
         {
+            if (_loadingFile) return;
             _matrix = null;
             SetComputeEnabled(false);
             RefreshInputGrid();
